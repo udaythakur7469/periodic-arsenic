@@ -47,6 +47,7 @@ Building robust backends requires understanding performance *in context*, but mo
 ✅ **OpenTelemetry** — Built-in OTEL exporter  
 ✅ **Callsite Attribution** — Know exactly which file and line triggered a query  
 ✅ **Semantic Explanations** — Human-readable descriptions of every signal  
+✅ **Redis Command Monitoring** — 29 commands categorized with docs links  
 ✅ **Type-safe** — Strict TypeScript from the ground up  
 ✅ **No global state** — No side effects on import  
 ✅ **Production-ready** — Non-blocking, never crashes your app
@@ -345,14 +346,28 @@ pgAdapter(monitor, pool);
 
 ```typescript
 import Redis from 'ioredis';
-import { redisAdapter, SLOW_REDIS_COMMANDS } from '@periodic/arsenic';
+import {
+  createMonitor,
+  redisAdapter,
+  SLOW_REDIS_COMMANDS,
+  getRedisCommandInfo,
+  REDIS_COMMAND_INFO,
+} from '@periodic/arsenic';
 
 const redis = new Redis();
 
 const monitor = createMonitor({
   slowQueryThresholdMs: 50,
   exporter: (event) => {
-    if (SLOW_REDIS_COMMANDS.includes(event.operation)) {
+    // Route by command category for fine-grained alerting
+    const category = event.metadata?.commandCategory;
+
+    if (category === 'dangerous') {
+      console.error('[DANGEROUS REDIS COMMAND]', event);
+      sendToPagerDuty(event);
+    } else if (category === 'blocking') {
+      console.warn('[BLOCKING REDIS COMMAND]', event);
+    } else if (SLOW_REDIS_COMMANDS.includes(event.operation)) {
       console.warn('[SLOW REDIS COMMAND]', event);
     }
   },
@@ -360,6 +375,100 @@ const monitor = createMonitor({
 
 redisAdapter(monitor, redis);
 ```
+
+##### Redis Command Categories
+
+Arsenic automatically classifies every Redis command into one of four categories, giving you the context to route alerts appropriately:
+
+| Category | Count | Description |
+|----------|-------|-------------|
+| `dangerous` | 3 | Commands that should never run in production — they block the server or destroy data |
+| `blocking` | 4 | Commands that block until data is available — use with care |
+| `slow` | 22 | Commands with O(N) or worse complexity that can degrade under load |
+| `normal` | default | All other commands — no special classification |
+
+**Example — using `getRedisCommandInfo()`:**
+
+```typescript
+import { getRedisCommandInfo } from '@periodic/arsenic';
+
+const info = getRedisCommandInfo('KEYS');
+console.log(info);
+// { command: 'KEYS', category: 'dangerous', docs: 'https://periodic.dev/redis/keys' }
+
+const info2 = getRedisCommandInfo('GET');
+console.log(info2);
+// { command: 'GET', category: 'normal', docs: 'https://periodic.dev/redis/get' }
+```
+
+**Example — list all monitored commands:**
+
+```typescript
+import { REDIS_COMMAND_INFO } from '@periodic/arsenic';
+
+Object.entries(REDIS_COMMAND_INFO).forEach(([cmd, info]) => {
+  console.log(`${cmd}: ${info.category} - ${info.docs}`);
+});
+```
+
+**Example event with Redis metadata:**
+
+```json
+{
+  "type": "db.query",
+  "db": "redis",
+  "adapter": "ioredis",
+  "operation": "HGETALL",
+  "durationMs": 84,
+  "slow": true,
+  "signals": ["slow_query"],
+  "severity": "warning",
+  "metadata": {
+    "command": "HGETALL",
+    "commandCategory": "slow",
+    "commandDocs": "https://periodic.dev/redis/hgetall",
+    "args": ["user:123"]
+  },
+  "timestamp": "2024-02-13T10:30:00.000Z"
+}
+```
+
+##### Command Categories Reference
+
+| Command | Category | Description |
+|---------|----------|-------------|
+| `KEYS` | `dangerous` | Never use in production — blocks server while scanning all keys |
+| `FLUSHALL` | `dangerous` | Deletes all keys in all databases |
+| `FLUSHDB` | `dangerous` | Deletes all keys in current database |
+| `BLPOP` | `blocking` | Blocking list pop operation |
+| `BRPOP` | `blocking` | Blocking reverse list pop operation |
+| `BRPOPLPUSH` | `blocking` | Blocking pop and push between lists |
+| `BLMOVE` | `blocking` | Blocking atomic list move |
+| `HGETALL` | `slow` | Can be slow with large hashes |
+| `SMEMBERS` | `slow` | Returns all members — unbounded on large sets |
+| `LRANGE` | `slow` | Scans a range of list elements |
+| `SORT` | `slow` | Sorts list/set/sorted set — complex and memory-intensive |
+| `SCAN` | `slow` | Better than KEYS but still monitored |
+| `SSCAN` | `slow` | Iterates set members |
+| `HSCAN` | `slow` | Iterates hash fields |
+| `ZSCAN` | `slow` | Iterates sorted set members |
+| `SUNION` | `slow` | Union of multiple sets |
+| `SINTER` | `slow` | Intersection of multiple sets |
+| `SDIFF` | `slow` | Difference between sets |
+| `SUNIONSTORE` | `slow` | Union stored to destination |
+| `SINTERSTORE` | `slow` | Intersection stored to destination |
+| `SDIFFSTORE` | `slow` | Difference stored to destination |
+| `ZRANGE` | `slow` | Range query on sorted set |
+| `ZRANGEBYSCORE` | `slow` | Score-range query on sorted set |
+| `ZRANGEBYLEX` | `slow` | Lex-range query on sorted set |
+| `ZREVRANGE` | `slow` | Reverse range on sorted set |
+| `ZREVRANGEBYSCORE` | `slow` | Reverse score-range query |
+| `ZINTERSTORE` | `slow` | Intersection of sorted sets |
+| `ZUNIONSTORE` | `slow` | Union of sorted sets |
+| `OBJECT` | `slow` | Inspects object encoding/idle time |
+| `WAIT` | `slow` | Blocks until replicas acknowledge writes |
+
+---
 
 ### 📊 Multiple Exporters
 
@@ -610,6 +719,19 @@ pgAdapter(monitor: Monitor, pool: Pool): void
 redisAdapter(monitor: Monitor, client: Redis | RedisClient): void
 ```
 
+### Redis Utilities
+
+```typescript
+// Get categorization info for any Redis command
+getRedisCommandInfo(command: string): { command: string; category: 'dangerous' | 'blocking' | 'slow' | 'normal'; docs: string }
+
+// Array of command names classified as slow
+SLOW_REDIS_COMMANDS: string[]
+
+// Full map of all monitored Redis commands with metadata
+REDIS_COMMAND_INFO: Record<string, { category: string; docs: string }>
+```
+
 ### Exporters
 
 ```typescript
@@ -650,7 +772,7 @@ interface ForgeEvent {
 | MySQL | `prismaAdapter` | ✅ Full support |
 | SQLite | `prismaAdapter` | ✅ Full support |
 | CockroachDB | `prismaAdapter` | ✅ Full support |
-| Redis | `redisAdapter` | ✅ Full support |
+| Redis | `redisAdapter` | ✅ Full support + Command Monitoring |
 
 ---
 
@@ -669,7 +791,7 @@ interface ForgeEvent {
 │   │   ├── mongoose.ts       # Mongoose adapter
 │   │   ├── prisma.ts         # Prisma adapter
 │   │   ├── pg.ts             # PostgreSQL (pg) adapter
-│   │   └── redis.ts          # Redis adapter
+│   │   └── redis.ts          # Redis adapter + command monitoring
 │   ├── frameworks/            # Framework middleware
 │   │   ├── express.ts        # Express context middleware
 │   │   └── fastify.ts        # Fastify context plugin

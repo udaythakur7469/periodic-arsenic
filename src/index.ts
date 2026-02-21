@@ -16,7 +16,12 @@ export { fastifyContext } from './frameworks/fastify';
 export { mongooseAdapter } from './adapters/mongoose';
 export { prismaAdapter } from './adapters/prisma';
 export { pgAdapter } from './adapters/pg';
-export { redisAdapter, SLOW_REDIS_COMMANDS } from './adapters/redis';
+export {
+  redisAdapter,
+  SLOW_REDIS_COMMANDS,
+  REDIS_COMMAND_INFO,
+  getRedisCommandInfo,
+} from './adapters/redis';
 
 // Exporters
 export {

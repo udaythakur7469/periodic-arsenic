@@ -289,6 +289,297 @@ High-frequency query is fast and stable, indicating well-optimized execution.
 
 ---
 
+## Redis Command Monitoring
+
+Arsenic provides special monitoring for Redis commands with automatic categorization and documentation links. Every Redis command is classified into one of four categories — `dangerous`, `blocking`, `slow`, or `normal` — so you can route alerts with precision rather than treating all Redis activity the same.
+
+29 commands are explicitly documented. Any command not in the list defaults to the `normal` category.
+
+### Redis Command Categories
+
+#### Dangerous Commands 🔴
+
+These commands should **never run in production**. They either block the entire Redis server while executing or irreversibly destroy data. Arsenic always flags these regardless of duration.
+
+---
+
+**`KEYS`**
+- **Category:** `dangerous`
+- **Issue:** Performs a full keyspace scan, blocking all other operations while it runs. On a large dataset this can stall Redis for seconds.
+- **Fix:** Use `SCAN` with a cursor for iterative, non-blocking key enumeration.
+- **Docs:** https://periodic.dev/redis/keys
+
+---
+
+**`FLUSHALL`**
+- **Category:** `dangerous`
+- **Issue:** Deletes every key in every database on the Redis instance. There is no confirmation prompt and no undo.
+- **Fix:** Restrict this command via Redis ACLs. Use targeted `DEL` or `UNLINK` for key removal.
+- **Docs:** https://periodic.dev/redis/flushall
+
+---
+
+**`FLUSHDB`**
+- **Category:** `dangerous`
+- **Issue:** Deletes all keys in the currently selected database. Equally destructive within its scope.
+- **Fix:** Restrict via ACLs. Use selective key deletion instead.
+- **Docs:** https://periodic.dev/redis/flushdb
+
+---
+
+#### Blocking Commands ⚠️
+
+These commands block the calling client until data becomes available or a timeout expires. They are valid for specific use cases like task queues, but require deliberate configuration to avoid holding connections indefinitely.
+
+---
+
+**`BLPOP`**
+- **Category:** `blocking`
+- **Issue:** Blocks the connection until an element is available in one of the specified lists.
+- **Use case:** Background job queues, event streams.
+- **Caution:** Always set a timeout. Unbounded blocking connections exhaust your connection pool.
+- **Docs:** https://periodic.dev/redis/blpop
+
+---
+
+**`BRPOP`**
+- **Category:** `blocking`
+- **Issue:** Blocking right-side pop from a list. Same behavior as `BLPOP` from the tail.
+- **Use case:** LIFO task queues.
+- **Caution:** Use with a timeout and dedicated connection pool.
+- **Docs:** https://periodic.dev/redis/brpop
+
+---
+
+**`BRPOPLPUSH`**
+- **Category:** `blocking`
+- **Issue:** Atomically pops from one list and pushes to another — but blocks until the source list has an element.
+- **Use case:** Reliable queue patterns with a processing list.
+- **Caution:** Deprecated in Redis 6.2. Prefer `BLMOVE`.
+- **Docs:** https://periodic.dev/redis/brpoplpush
+
+---
+
+**`BLMOVE`**
+- **Category:** `blocking`
+- **Issue:** Blocking atomic move between lists. Replaces `BRPOPLPUSH`.
+- **Use case:** Reliable queue with acknowledgment.
+- **Caution:** Always specify a timeout to prevent indefinite blocking.
+- **Docs:** https://periodic.dev/redis/blmove
+
+---
+
+#### Slow Commands ⏱️
+
+These commands have O(N) or worse time complexity. They are safe in small datasets but can degrade significantly under load. Arsenic monitors these so you can catch regressions before they become incidents.
+
+---
+
+**`HGETALL`**
+- **Issue:** Returns every field and value in a hash. Performance degrades linearly with hash size.
+- **Fix:** Use `HMGET` with explicit field names, or `HSCAN` to iterate large hashes.
+- **Docs:** https://periodic.dev/redis/hgetall
+
+---
+
+**`SMEMBERS`**
+- **Issue:** Returns all members of a set — unbounded on large sets.
+- **Fix:** Use `SSCAN` to iterate, or `SRANDMEMBER` for sampling.
+- **Docs:** https://periodic.dev/redis/smembers
+
+---
+
+**`LRANGE`**
+- **Issue:** Scans a range of list elements. Wide ranges on large lists are expensive.
+- **Fix:** Use narrow ranges or cursor-based pagination.
+- **Docs:** https://periodic.dev/redis/lrange
+
+---
+
+**`SORT`**
+- **Issue:** Sorts list, set, or sorted set elements. Can be memory- and CPU-intensive on large collections, especially with `BY` and `GET` patterns.
+- **Fix:** Pre-sort data at write time using a sorted set. Avoid `SORT` in hot paths.
+- **Docs:** https://periodic.dev/redis/sort
+
+---
+
+**`SCAN` / `SSCAN` / `HSCAN` / `ZSCAN`**
+- **Issue:** Iterative cursor-based scanning. Much better than `KEYS`, but still O(N) across the full dataset when iterated to completion.
+- **Fix:** Use with count hints and avoid completing full scans in request handlers. Move to background jobs where possible.
+- **Docs:** https://periodic.dev/redis/scan | https://periodic.dev/redis/sscan | https://periodic.dev/redis/hscan | https://periodic.dev/redis/zscan
+
+---
+
+**`SUNION` / `SINTER` / `SDIFF`**
+- **Issue:** Set operations across multiple sets. Complexity grows with the total size of all input sets.
+- **Fix:** Cache results for stable inputs. Avoid in hot paths with large sets.
+- **Docs:** https://periodic.dev/redis/sunion | https://periodic.dev/redis/sinter | https://periodic.dev/redis/sdiff
+
+---
+
+**`SUNIONSTORE` / `SINTERSTORE` / `SDIFFSTORE`**
+- **Issue:** Same as above but also writes the result to a destination key. Adds a write operation on top of the set computation.
+- **Fix:** Run as a background job. Cache the stored result with a TTL.
+- **Docs:** https://periodic.dev/redis/sunionstore | https://periodic.dev/redis/sinterstore | https://periodic.dev/redis/sdiffstore
+
+---
+
+**`ZRANGE` / `ZRANGEBYSCORE` / `ZRANGEBYLEX` / `ZREVRANGE` / `ZREVRANGEBYSCORE`**
+- **Issue:** Range queries on sorted sets. Linear in the number of elements returned.
+- **Fix:** Paginate with `LIMIT offset count`. Avoid returning the entire sorted set.
+- **Docs:** https://periodic.dev/redis/zrange | https://periodic.dev/redis/zrangebyscore | https://periodic.dev/redis/zrangebylex | https://periodic.dev/redis/zrevrange | https://periodic.dev/redis/zrevrangebyscore
+
+---
+
+**`ZINTERSTORE` / `ZUNIONSTORE`**
+- **Issue:** Computes intersection or union of multiple sorted sets and stores the result. Expensive with large input sets.
+- **Fix:** Cache results. Run in background workers rather than on the request path.
+- **Docs:** https://periodic.dev/redis/zinterstore | https://periodic.dev/redis/zunionstore
+
+---
+
+**`OBJECT`**
+- **Issue:** Inspects internal Redis object metadata (encoding, idle time, frequency). Rarely expensive but adds overhead in tight loops.
+- **Fix:** Use only for diagnostics, not in hot paths.
+- **Docs:** https://periodic.dev/redis/object
+
+---
+
+**`WAIT`**
+- **Issue:** Blocks the client until a specified number of replicas acknowledge the write, or until the timeout expires. Adds latency proportional to replication lag.
+- **Fix:** Use only when strong consistency is required. Set a reasonable timeout.
+- **Docs:** https://periodic.dev/redis/wait
+
+---
+
+### Using Redis Command Info
+
+```typescript
+import { getRedisCommandInfo } from '@periodic/arsenic';
+
+const info = getRedisCommandInfo('KEYS');
+console.log(info);
+// Output: { command: 'KEYS', category: 'dangerous', docs: 'https://periodic.dev/redis/keys' }
+
+const info2 = getRedisCommandInfo('GET');
+console.log(info2);
+// Output: { command: 'GET', category: 'normal', docs: 'https://periodic.dev/redis/get' }
+```
+
+---
+
+### Event Structure with Redis
+
+Redis events include `commandCategory` and `commandDocs` in the `metadata` field, giving your exporter everything it needs to make routing decisions without additional lookups:
+
+```json
+{
+  "type": "db.query",
+  "db": "redis",
+  "adapter": "ioredis",
+  "operation": "HGETALL",
+  "durationMs": 84,
+  "slow": true,
+  "signals": ["slow_query"],
+  "severity": "warning",
+  "metadata": {
+    "command": "HGETALL",
+    "commandCategory": "slow",
+    "commandDocs": "https://periodic.dev/redis/hgetall",
+    "args": ["user:123"]
+  },
+  "request": {
+    "id": "req_4a91",
+    "method": "GET",
+    "route": "/api/users/:id"
+  },
+  "callsite": {
+    "file": "src/services/UserService.ts",
+    "line": 62
+  },
+  "timestamp": "2024-02-13T10:30:00.000Z"
+}
+```
+
+---
+
+### Monitoring Redis in Production
+
+**Alert on dangerous commands:**
+
+```typescript
+import { createMonitor, redisAdapter } from '@periodic/arsenic';
+
+const monitor = createMonitor({
+  exporter: (event) => {
+    if (event.metadata?.commandCategory === 'dangerous') {
+      // Page immediately — KEYS, FLUSHALL, FLUSHDB in production is never acceptable
+      sendToPagerDuty({
+        severity: 'critical',
+        message: `Dangerous Redis command: ${event.operation}`,
+        event,
+      });
+    }
+  },
+});
+
+redisAdapter(monitor, redis);
+```
+
+**Track slow commands:**
+
+```typescript
+const monitor = createMonitor({
+  slowQueryThresholdMs: 50,
+  exporter: (event) => {
+    if (event.metadata?.commandCategory === 'slow' && event.slow) {
+      logger.warn('Slow Redis command exceeded threshold', {
+        command: event.operation,
+        durationMs: event.durationMs,
+        args: event.metadata.args,
+        docs: event.metadata.commandDocs,
+      });
+    }
+  },
+});
+```
+
+**Category-based routing:**
+
+```typescript
+import { SignalSeverity } from '@periodic/arsenic';
+
+const monitor = createMonitor({
+  exporter: (event) => {
+    const category = event.metadata?.commandCategory;
+
+    switch (category) {
+      case 'dangerous':
+        // Immediate alert — these should never fire in production
+        sendToPagerDuty(event);
+        break;
+
+      case 'blocking':
+        // Warn if blocking commands are taking longer than expected
+        if (event.slow) sendToSlack(event);
+        break;
+
+      case 'slow':
+        // Log for trend analysis; alert if crossing severity threshold
+        logger.warn('redis.slow_command', event);
+        if (event.severity === SignalSeverity.CRITICAL) sendToSlack(event);
+        break;
+
+      default:
+        // Normal commands — log at info level
+        logger.info('redis.query', event);
+    }
+  },
+});
+```
+
+---
+
 ## Using Signals in Production
 
 ### Filtering by Severity

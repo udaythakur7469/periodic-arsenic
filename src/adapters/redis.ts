@@ -5,6 +5,201 @@
 import { Monitor, RawQueryEvent } from '../core/types';
 import { captureCallsite } from '../core/utils';
 
+const DOCS_BASE = 'https://periodic.dev/redis';
+
+/**
+ * Redis command information with docs links
+ */
+interface RedisCommandInfo {
+  command: string;
+  category: 'slow' | 'blocking' | 'dangerous' | 'normal';
+  docs?: string;
+}
+
+/**
+ * Slow/dangerous Redis commands with documentation
+ */
+export const REDIS_COMMAND_INFO: Record<string, RedisCommandInfo> = {
+  // Dangerous commands - block entire server
+  KEYS: {
+    command: 'KEYS',
+    category: 'dangerous',
+    docs: `${DOCS_BASE}/keys`,
+  },
+  FLUSHALL: {
+    command: 'FLUSHALL',
+    category: 'dangerous',
+    docs: `${DOCS_BASE}/flushall`,
+  },
+  FLUSHDB: {
+    command: 'FLUSHDB',
+    category: 'dangerous',
+    docs: `${DOCS_BASE}/flushdb`,
+  },
+
+  // Blocking commands
+  BLPOP: {
+    command: 'BLPOP',
+    category: 'blocking',
+    docs: `${DOCS_BASE}/blpop`,
+  },
+  BRPOP: {
+    command: 'BRPOP',
+    category: 'blocking',
+    docs: `${DOCS_BASE}/brpop`,
+  },
+  BRPOPLPUSH: {
+    command: 'BRPOPLPUSH',
+    category: 'blocking',
+    docs: `${DOCS_BASE}/brpoplpush`,
+  },
+  BLMOVE: {
+    command: 'BLMOVE',
+    category: 'blocking',
+    docs: `${DOCS_BASE}/blmove`,
+  },
+
+  // Slow commands - expensive operations
+  SORT: {
+    command: 'SORT',
+    category: 'slow',
+    docs: `${DOCS_BASE}/sort`,
+  },
+  SUNION: {
+    command: 'SUNION',
+    category: 'slow',
+    docs: `${DOCS_BASE}/sunion`,
+  },
+  SINTER: {
+    command: 'SINTER',
+    category: 'slow',
+    docs: `${DOCS_BASE}/sinter`,
+  },
+  SDIFF: {
+    command: 'SDIFF',
+    category: 'slow',
+    docs: `${DOCS_BASE}/sdiff`,
+  },
+  SUNIONSTORE: {
+    command: 'SUNIONSTORE',
+    category: 'slow',
+    docs: `${DOCS_BASE}/sunionstore`,
+  },
+  SINTERSTORE: {
+    command: 'SINTERSTORE',
+    category: 'slow',
+    docs: `${DOCS_BASE}/sinterstore`,
+  },
+  SDIFFSTORE: {
+    command: 'SDIFFSTORE',
+    category: 'slow',
+    docs: `${DOCS_BASE}/sdiffstore`,
+  },
+  ZINTERSTORE: {
+    command: 'ZINTERSTORE',
+    category: 'slow',
+    docs: `${DOCS_BASE}/zinterstore`,
+  },
+  ZUNIONSTORE: {
+    command: 'ZUNIONSTORE',
+    category: 'slow',
+    docs: `${DOCS_BASE}/zunionstore`,
+  },
+  ZRANGEBYSCORE: {
+    command: 'ZRANGEBYSCORE',
+    category: 'slow',
+    docs: `${DOCS_BASE}/zrangebyscore`,
+  },
+  ZREVRANGEBYSCORE: {
+    command: 'ZREVRANGEBYSCORE',
+    category: 'slow',
+    docs: `${DOCS_BASE}/zrevrangebyscore`,
+  },
+
+  // Scan operations (better than KEYS but still monitored)
+  SCAN: {
+    command: 'SCAN',
+    category: 'slow',
+    docs: `${DOCS_BASE}/scan`,
+  },
+  SSCAN: {
+    command: 'SSCAN',
+    category: 'slow',
+    docs: `${DOCS_BASE}/sscan`,
+  },
+  HSCAN: {
+    command: 'HSCAN',
+    category: 'slow',
+    docs: `${DOCS_BASE}/hscan`,
+  },
+  ZSCAN: {
+    command: 'ZSCAN',
+    category: 'slow',
+    docs: `${DOCS_BASE}/zscan`,
+  },
+
+  // Large data operations
+  HGETALL: {
+    command: 'HGETALL',
+    category: 'slow',
+    docs: `${DOCS_BASE}/hgetall`,
+  },
+  SMEMBERS: {
+    command: 'SMEMBERS',
+    category: 'slow',
+    docs: `${DOCS_BASE}/smembers`,
+  },
+  LRANGE: {
+    command: 'LRANGE',
+    category: 'slow',
+    docs: `${DOCS_BASE}/lrange`,
+  },
+  ZRANGE: {
+    command: 'ZRANGE',
+    category: 'slow',
+    docs: `${DOCS_BASE}/zrange`,
+  },
+  ZREVRANGE: {
+    command: 'ZREVRANGE',
+    category: 'slow',
+    docs: `${DOCS_BASE}/zrevrange`,
+  },
+
+  // Multi/Exec
+  MULTI: {
+    command: 'MULTI',
+    category: 'normal',
+    docs: `${DOCS_BASE}/multi`,
+  },
+  EXEC: {
+    command: 'EXEC',
+    category: 'normal',
+    docs: `${DOCS_BASE}/exec`,
+  },
+};
+
+/**
+ * Get command info with docs link
+ */
+export function getRedisCommandInfo(command: string): RedisCommandInfo {
+  const upperCommand = command.toUpperCase();
+  return (
+    REDIS_COMMAND_INFO[upperCommand] || {
+      command: upperCommand,
+      category: 'normal',
+      docs: `${DOCS_BASE}/commands`,
+    }
+  );
+}
+
+/**
+ * Legacy array of slow commands (for backward compatibility)
+ */
+export const SLOW_REDIS_COMMANDS = Object.keys(REDIS_COMMAND_INFO).filter(
+  (cmd) =>
+    ['slow', 'dangerous', 'blocking'].includes(REDIS_COMMAND_INFO[cmd].category)
+);
+
 /**
  * Instrument Redis client for command observation
  * Supports both redis and ioredis clients
@@ -35,6 +230,7 @@ function instrumentIoRedis(monitor: Monitor, redis: any): void {
     const startTime = Date.now();
     const callsite = captureCallsite();
     const commandName = command.name || 'unknown';
+    const commandInfo = getRedisCommandInfo(commandName);
 
     const result = originalSendCommand.call(this, command, ...args);
 
@@ -53,6 +249,8 @@ function instrumentIoRedis(monitor: Monitor, redis: any): void {
             metadata: {
               command: commandName,
               args: command.args,
+              commandCategory: commandInfo.category,
+              commandDocs: commandInfo.docs,
             },
           };
 
@@ -75,6 +273,8 @@ function instrumentIoRedis(monitor: Monitor, redis: any): void {
             metadata: {
               command: commandName,
               args: command.args,
+              commandCategory: commandInfo.category,
+              commandDocs: commandInfo.docs,
               error: error.message,
             },
           };
@@ -104,6 +304,7 @@ function instrumentNodeRedis(monitor: Monitor, redis: any): void {
       const startTime = Date.now();
       const callsite = captureCallsite();
       const commandName = args[0] || 'unknown';
+      const commandInfo = getRedisCommandInfo(commandName);
 
       try {
         const result = await originalSendCommand.call(this, args, options);
@@ -119,6 +320,8 @@ function instrumentNodeRedis(monitor: Monitor, redis: any): void {
           metadata: {
             command: commandName,
             args: args.slice(1),
+            commandCategory: commandInfo.category,
+            commandDocs: commandInfo.docs,
           },
         };
 
@@ -140,6 +343,8 @@ function instrumentNodeRedis(monitor: Monitor, redis: any): void {
           metadata: {
             command: commandName,
             args: args.slice(1),
+            commandCategory: commandInfo.category,
+            commandDocs: commandInfo.docs,
             error: error instanceof Error ? error.message : 'Unknown error',
           },
         };
@@ -163,19 +368,3 @@ function extractKeyFromCommand(command: any): string {
   }
   return 'unknown';
 }
-
-/**
- * Detect slow Redis commands
- * Some Redis commands are known to be slow and should be monitored
- */
-export const SLOW_REDIS_COMMANDS = [
-  'keys', // Should use SCAN instead
-  'flushall', // Blocks the entire server
-  'flushdb', // Blocks the entire database
-  'sort', // Can be slow with large datasets
-  'sunion', // Set union can be expensive
-  'sinter', // Set intersection can be expensive
-  'sdiff', // Set difference can be expensive
-  'zinterstore', // Sorted set operations can be slow
-  'zunionstore',
-];
