@@ -1,6 +1,6 @@
 {
   "name": "@periodic/arsenic",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A semantic runtime monitoring library for database queries with request correlation and intelligent signal detection.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
