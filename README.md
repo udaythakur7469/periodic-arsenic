@@ -40,14 +40,14 @@ Building robust backends requires understanding performance *in context*, but mo
 
 ✅ **Zero dependencies** — Pure TypeScript monitoring core  
 ✅ **Framework-agnostic** — Safe for use in both libraries and applications  
-✅ **30+ Production Signals** — Critical, Warning, and Info classifications  
+✅ **62 Production Signals** — 7 Critical, 9 Warning, 14 Info, 32 Redis-specific
 ✅ **Request Correlation** — Every query linked to the HTTP request that triggered it  
 ✅ **Multi-Database** — Prisma, Mongoose, PostgreSQL, and Redis support  
 ✅ **Multi-Framework** — Express and Fastify ready  
 ✅ **OpenTelemetry** — Built-in OTEL exporter  
 ✅ **Callsite Attribution** — Know exactly which file and line triggered a query  
 ✅ **Semantic Explanations** — Human-readable descriptions of every signal  
-✅ **Redis Command Monitoring** — 29 commands categorized with docs links  
+✅ **Redis Command Monitoring** — 32 commands categorized with docs links
 ✅ **Type-safe** — Strict TypeScript from the ground up  
 ✅ **No global state** — No side effects on import  
 ✅ **Production-ready** — Non-blocking, never crashes your app
@@ -185,7 +185,7 @@ const monitor = createMonitor({
 
 - **`Monitor` is the core observation engine**
 - Correlates database queries to active HTTP requests
-- Detects 30+ semantic signals across three severity levels
+- Detects 62 semantic signals across three severity levels
 - **Never blocks** — all exports are asynchronous and safe
 - Callsite attribution pinpoints the exact source of every query
 
@@ -205,7 +205,7 @@ exporter: (event) => {
 
 ## ✨ Features
 
-### 🔴 Critical Signals (16)
+### 🔴 Critical Signals (7)
 
 High-impact issues that require immediate attention:
 
@@ -268,6 +268,24 @@ const monitor = createMonitor({
   },
 });
 ```
+### 🔁 Redis Command Signals (32)
+
+Every Redis command is automatically classified into one of four categories, giving your exporter the context to route alerts with precision:
+
+```
+dangerous (3)  — KEYS, FLUSHALL, FLUSHDB
+blocking  (4)  — BLPOP, BRPOP, BRPOPLPUSH, BLMOVE
+slow     (23)  — SORT, SCAN, SSCAN, HSCAN, ZSCAN, HGETALL, SMEMBERS,
+                 LRANGE, ZRANGE, ZREVRANGE, ZRANGEBYLEX, ZRANGEBYSCORE,
+                 ZREVRANGEBYSCORE, SUNION, SINTER, SDIFF, SUNIONSTORE,
+                 SINTERSTORE, SDIFFSTORE, ZINTERSTORE, ZUNIONSTORE,
+                 OBJECT, WAIT
+normal    (2)  — MULTI, EXEC (tracked for transaction boundary observability)
+```
+
+Every event includes `commandCategory` and `commandDocs` in its metadata — so you can route dangerous commands straight to PagerDuty, log slow commands for trend analysis, and let normal commands pass through quietly, all without additional lookups.
+
+Commands not in the explicit list default to the `normal` category with no warning or critical signals emitted.
 
 ### 🔗 Request Correlation
 
@@ -384,7 +402,7 @@ Arsenic automatically classifies every Redis command into one of four categories
 |----------|-------|-------------|
 | `dangerous` | 3 | Commands that should never run in production — they block the server or destroy data |
 | `blocking` | 4 | Commands that block until data is available — use with care |
-| `slow` | 22 | Commands with O(N) or worse complexity that can degrade under load |
+| `slow` | 23 | Commands with O(N) or worse complexity that can degrade under load |
 | `normal` | default | All other commands — no special classification |
 
 **Example — using `getRedisCommandInfo()`:**
@@ -468,6 +486,8 @@ Object.entries(REDIS_COMMAND_INFO).forEach(([cmd, info]) => {
 | `ZUNIONSTORE` | `slow` | Union of sorted sets |
 | `OBJECT` | `slow` | Inspects object encoding/idle time |
 | `WAIT` | `slow` | Blocks until replicas acknowledge writes |
+| `MULTI` | `normal` | Opens a transaction block — queued commands run when EXEC is called |
+| `EXEC`  | `normal` | Executes all commands queued since MULTI |
 
 ---
 

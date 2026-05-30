@@ -14,10 +14,11 @@ Production-ready semantic runtime monitoring library for database queries.
 ### Added
 
 #### Core Features
-- **Signal System**: 30+ production-grade signals across 3 severity levels
+- **Signal System**: 62 production-grade signals across 3 severity levels (30 semantic + 32 Redis command signals)
   - 7 CRITICAL signals (hot_path, n_plus_one, unbounded_query, blocking_io, retry_loop, write_contention, connection_pool_exhaustion)
   - 9 WARNING signals (slow_query, fan_out, high_variance_latency, high_cpu, high_memory, large_payload, deprecated_api, overfetching, read_heavy_hotspot)
   - 14 INFO signals (fast_query, bounded_query, indexed_lookup, stable_latency, cached_query, index_hit, single_query, optimized_join, connection_reused, low_memory, low_cpu, stable_response, cache_candidate, healthy_hot_path)
+  - 32 Redis command signals (KEYS, FLUSHALL, FLUSHDB, BLPOP, BRPOP, BRPOPLPUSH, BLMOVE, SORT, SUNION, SINTER, SDIFF, SUNIONSTORE, SINTERSTORE, SDIFFSTORE, ZINTERSTORE, ZUNIONSTORE, ZRANGEBYSCORE, ZREVRANGEBYSCORE, SCAN, SSCAN, HSCAN, ZSCAN, HGETALL, SMEMBERS, LRANGE, ZRANGE, ZREVRANGE, ZRANGEBYLEX, OBJECT, WAIT, MULTI, EXEC)
 
 - **Severity Levels**: `SignalSeverity` enum with CRITICAL, WARNING, INFO
 - **Request Correlation**: AsyncLocalStorage-based request context tracking
