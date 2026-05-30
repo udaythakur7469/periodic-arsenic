@@ -208,12 +208,12 @@ Special thanks to:
 
 ## Links
 
-- [GitHub Repository](https://github.com/yourusername/periodic-arsenic)
+- [GitHub Repository](https://github.com/udaythakur7469/periodic-arsenic)
 - [npm Package](https://www.npmjs.com/package/@periodic/arsenic)
-- [Documentation](https://periodic.dev/arsenic)
-- [Issue Tracker](https://github.com/yourusername/periodic-arsenic/issues)
-- [Discussions](https://github.com/yourusername/periodic-arsenic/discussions)
+- [Documentation](https://arsenicdev.online)
+- [Issue Tracker](https://github.com/udaythakur7469/periodic-arsenic/issues)
+- [Discussions](https://github.com/udaythakur7469/periodic-arsenic/discussions)
 
 ---
 
-**Note**: This changelog is maintained manually. For a complete list of commits, see the [Git history](https://github.com/yourusername/periodic-arsenic/commits/main).
+**Note**: This changelog is maintained manually. For a complete list of commits, see the [Git history](https://github.com/udaythakur7469/periodic-arsenic/commits/main).

@@ -129,11 +129,11 @@ Create `sqliteAdapter` that works with better-sqlite3
 
 ```bash
 # Clone your fork
-git clone https://github.com/YOUR_USERNAME/periodic-arsenic.git
+git clone https://github.com/udaythakur7469/periodic-arsenic.git
 cd periodic-arsenic
 
 # Add upstream remote
-git remote add upstream https://github.com/yourusername/periodic-arsenic.git
+git remote add upstream https://github.com/udaythakur7469/periodic-arsenic.git
 
 # Install dependencies
 npm install
@@ -663,7 +663,7 @@ export function createMyExporter(config: MyExporterConfig): Exporter {
 
 ## ❓ Questions?
 
-- Open a [GitHub Discussion](https://github.com/yourusername/periodic-arsenic/discussions)
+- Open a [GitHub Discussion](https://github.com/udaythakur7469/periodic-arsenic/discussions)
 - Email: your.email@example.com
 
 ---
