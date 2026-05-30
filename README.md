@@ -394,11 +394,12 @@ import { getRedisCommandInfo } from '@periodic/arsenic';
 
 const info = getRedisCommandInfo('KEYS');
 console.log(info);
-// { command: 'KEYS', category: 'dangerous', docs: 'https://periodic.dev/redis/keys' }
+// { command: 'KEYS', category: 'dangerous', docs: 'https://arsenicdev.online/docs/signals/redis-keys' }
 
+// Commands not in the explicit list default to 'normal' — no signal page, fallback URL
 const info2 = getRedisCommandInfo('GET');
-console.log(info2);
-// { command: 'GET', category: 'normal', docs: 'https://periodic.dev/redis/get' }
+// { command: 'GET', category: 'normal', docs: 'https://arsenicdev.online/docs/adapters/redis' }
+// 'normal' category commands emit no warning/critical signals under standard usage
 ```
 
 **Example — list all monitored commands:**
@@ -426,7 +427,7 @@ Object.entries(REDIS_COMMAND_INFO).forEach(([cmd, info]) => {
   "metadata": {
     "command": "HGETALL",
     "commandCategory": "slow",
-    "commandDocs": "https://periodic.dev/redis/hgetall",
+    "commandDocs": "https://arsenicdev.online/docs/signals/redis-hgetall",
     "args": ["user:123"]
   },
   "timestamp": "2024-02-13T10:30:00.000Z"
