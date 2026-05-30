@@ -374,4 +374,4 @@ app.use(expressContext(monitor)); // Before your routes
 
 **Happy monitoring! 🎉**
 
-Need help? Open an [issue](https://github.com/yourusername/periodic-arsenic/issues) or [discussion](https://github.com/yourusername/periodic-arsenic/discussions).
+Need help? Open an [issue](https://github.com/udaythakur7469/periodic-arsenic/issues) or [discussion](https://github.com/udaythakur7469/periodic-arsenic/discussions).

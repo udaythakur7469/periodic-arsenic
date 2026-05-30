@@ -18,19 +18,19 @@
       "summary": "Query exceeded configured threshold.",
       "detail": "This query took longer than expected and may impact request latency.",
       "severity": "warning",
-      "docs": "https://periodic.dev/signals/slow-query"
+      "docs": "https://arsenicdev.online/docs/signals/slow-query"
     },
     "hot_path": {
       "summary": "This query is both slow and frequently executed.",
       "detail": "It appears on a hot execution path and contributes significantly to overall request latency. This is a high-priority optimization target.",
       "severity": "critical",
-      "docs": "https://periodic.dev/signals/hot-path"
+      "docs": "https://arsenicdev.online/docs/signals/hot-path"
     },
     "unbounded_query": {
       "summary": "Query missing limit, potential unbounded data fetch.",
       "detail": "This query does not include a LIMIT clause and may return an unexpectedly large dataset, causing memory and performance issues.",
       "severity": "critical",
-      "docs": "https://periodic.dev/signals/unbounded-query"
+      "docs": "https://arsenicdev.online/docs/signals/unbounded-query"
     }
   },
   "request": {
@@ -70,7 +70,7 @@
       "summary": "Multiple queries detected where a single query should suffice.",
       "detail": "This pattern suggests an N+1 query issue, where data is fetched in a loop instead of a single batch query. This severely impacts performance at scale.",
       "severity": "critical",
-      "docs": "https://periodic.dev/signals/n-plus-one"
+      "docs": "https://arsenicdev.online/docs/signals/n-plus-one"
     }
   },
   "request": {
@@ -111,25 +111,25 @@
       "summary": "Query exceeded configured threshold.",
       "detail": "This query took longer than expected and may impact request latency.",
       "severity": "warning",
-      "docs": "https://periodic.dev/signals/slow-query"
+      "docs": "https://arsenicdev.online/docs/signals/slow-query"
     },
     "high_cpu": {
       "summary": "Query or request caused high CPU consumption.",
       "detail": "Elevated CPU usage detected during query execution, indicating compute-intensive operations that may benefit from optimization.",
       "severity": "warning",
-      "docs": "https://periodic.dev/signals/high-cpu"
+      "docs": "https://arsenicdev.online/docs/signals/high-cpu"
     },
     "high_memory": {
       "summary": "Query or request caused high memory usage.",
       "detail": "Elevated memory consumption detected, potentially due to large result sets, inefficient data structures, or memory leaks.",
       "severity": "warning",
-      "docs": "https://periodic.dev/signals/high-memory"
+      "docs": "https://arsenicdev.online/docs/signals/high-memory"
     },
     "large_payload": {
       "summary": "Query returned an excessively large dataset.",
       "detail": "The result set size is unusually large, suggesting potential overfetching, missing pagination, or inefficient data retrieval.",
       "severity": "warning",
-      "docs": "https://periodic.dev/signals/large-payload"
+      "docs": "https://arsenicdev.online/docs/signals/large-payload"
     }
   },
   "request": {
@@ -180,19 +180,19 @@
       "summary": "Query exceeded configured threshold.",
       "detail": "This query took longer than expected and may impact request latency.",
       "severity": "warning",
-      "docs": "https://periodic.dev/signals/slow-query"
+      "docs": "https://arsenicdev.online/docs/signals/slow-query"
     },
     "deprecated_api": {
       "summary": "Query used deprecated database methods.",
       "detail": "Deprecated database API detected. This may cause issues in future database versions and should be updated.",
       "severity": "warning",
-      "docs": "https://periodic.dev/signals/deprecated-api"
+      "docs": "https://arsenicdev.online/docs/signals/deprecated-api"
     },
     "blocking_io": {
       "summary": "Blocking operations detected on event loop.",
       "detail": "Synchronous I/O operations are blocking the event loop, degrading overall application responsiveness. This is critical in Node.js environments.",
       "severity": "critical",
-      "docs": "https://periodic.dev/signals/blocking-io"
+      "docs": "https://arsenicdev.online/docs/signals/blocking-io"
     }
   },
   "request": {
@@ -233,43 +233,43 @@
       "summary": "Query executed well under threshold.",
       "detail": "This query completed quickly and efficiently, indicating good performance.",
       "severity": "info",
-      "docs": "https://periodic.dev/signals/fast-query"
+      "docs": "https://arsenicdev.online/docs/signals/fast-query"
     },
     "bounded_query": {
       "summary": "Query includes proper limits.",
       "detail": "This query is properly bounded with a LIMIT clause, preventing unbounded data access and ensuring predictable performance.",
       "severity": "info",
-      "docs": "https://periodic.dev/signals/bounded-query"
+      "docs": "https://arsenicdev.online/docs/signals/bounded-query"
     },
     "indexed_lookup": {
       "summary": "Query likely leveraged database index.",
       "detail": "The query pattern and performance characteristics suggest efficient index usage, enabling fast data retrieval.",
       "severity": "info",
-      "docs": "https://periodic.dev/signals/indexed-lookup"
+      "docs": "https://arsenicdev.online/docs/signals/indexed-lookup"
     },
     "stable_latency": {
       "summary": "Query latency is consistent across executions.",
       "detail": "Predictable, low-variance performance indicates well-optimized query execution and stable system conditions.",
       "severity": "info",
-      "docs": "https://periodic.dev/signals/stable-latency"
+      "docs": "https://arsenicdev.online/docs/signals/stable-latency"
     },
     "connection_reused": {
       "summary": "Database connection reused, reducing overhead.",
       "detail": "Connection pooling working effectively, avoiding costly connection establishment overhead.",
       "severity": "info",
-      "docs": "https://periodic.dev/signals/connection-reused"
+      "docs": "https://arsenicdev.online/docs/signals/connection-reused"
     },
     "low_cpu": {
       "summary": "Query executed with low CPU usage.",
       "detail": "CPU-efficient query execution, indicating well-optimized database operations.",
       "severity": "info",
-      "docs": "https://periodic.dev/signals/low-cpu"
+      "docs": "https://arsenicdev.online/docs/signals/low-cpu"
     },
     "low_memory": {
       "summary": "Query executed with low memory footprint.",
       "detail": "Memory-efficient query execution detected, indicating good data handling practices.",
       "severity": "info",
-      "docs": "https://periodic.dev/signals/low-memory"
+      "docs": "https://arsenicdev.online/docs/signals/low-memory"
     }
   },
   "request": {
@@ -318,7 +318,7 @@
       "summary": "Repeated writes to the same record detected.",
       "detail": "High-frequency writes to the same record may cause lock contention, serialization issues, and performance degradation.",
       "severity": "critical",
-      "docs": "https://periodic.dev/signals/write-contention"
+      "docs": "https://arsenicdev.online/docs/signals/write-contention"
     }
   },
   "request": {
@@ -358,19 +358,19 @@
       "summary": "Query exceeded configured threshold.",
       "detail": "This query took longer than expected and may impact request latency.",
       "severity": "warning",
-      "docs": "https://periodic.dev/signals/slow-query"
+      "docs": "https://arsenicdev.online/docs/signals/slow-query"
     },
     "fan_out": {
       "summary": "Single request triggered multiple database queries.",
       "detail": "Request fans out into many DB queries, indicating potential architectural issues or missing data aggregation.",
       "severity": "warning",
-      "docs": "https://periodic.dev/signals/fan-out"
+      "docs": "https://arsenicdev.online/docs/signals/fan-out"
     },
     "retry_loop": {
       "summary": "Excessive retries detected on query execution.",
       "detail": "Query is being retried multiple times, indicating transient failures, deadlocks, or connectivity issues that need investigation.",
       "severity": "critical",
-      "docs": "https://periodic.dev/signals/retry-loop"
+      "docs": "https://arsenicdev.online/docs/signals/retry-loop"
     }
   },
   "request": {
@@ -412,13 +412,13 @@
       "summary": "Query exceeded configured threshold.",
       "detail": "This query took longer than expected and may impact request latency.",
       "severity": "warning",
-      "docs": "https://periodic.dev/signals/slow-query"
+      "docs": "https://arsenicdev.online/docs/signals/slow-query"
     },
     "large_payload": {
       "summary": "Query returned an excessively large dataset.",
       "detail": "The result set size is unusually large, suggesting potential overfetching, missing pagination, or inefficient data retrieval.",
       "severity": "warning",
-      "docs": "https://periodic.dev/signals/large-payload"
+      "docs": "https://arsenicdev.online/docs/signals/large-payload"
     }
   },
   "callsite": {
