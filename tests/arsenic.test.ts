@@ -5,6 +5,7 @@
 import { createMonitor } from '../src/core/monitor';
 import { detectSignals, updateHistory } from '../src/core/detector';
 import { ForgeEvent, RawQueryEvent, QueryHistory, MonitorConfig } from '../src/core/types';
+import { getRedisCommandInfo, REDIS_COMMAND_INFO } from '../src/adapters/redis';
 
 describe('@periodic/arsenic', () => {
   describe('createMonitor', () => {
@@ -343,6 +344,141 @@ describe('@periodic/arsenic', () => {
 
       const emittedEvent = exporter.mock.calls[0][0] as ForgeEvent;
       expect(emittedEvent.explanations['slow_query'].docs).toBeUndefined();
+    });
+    
+  });
+  describe('Redis Command Info', () => {
+    describe('getRedisCommandInfo', () => {
+      it('should return info for a dangerous command', () => {
+        const info = getRedisCommandInfo('KEYS');
+        expect(info.command).toBe('KEYS');
+        expect(info.category).toBe('dangerous');
+        expect(info.docs).toMatch(/keys/);
+      });
+
+      it('should be case-insensitive', () => {
+        const upper = getRedisCommandInfo('HGETALL');
+        const lower = getRedisCommandInfo('hgetall');
+        const mixed = getRedisCommandInfo('HgEtAlL');
+        expect(upper.command).toBe('HGETALL');
+        expect(lower.command).toBe('HGETALL');
+        expect(mixed.command).toBe('HGETALL');
+      });
+
+      it('should return normal category for unknown commands', () => {
+        const info = getRedisCommandInfo('GET');
+        expect(info.command).toBe('GET');
+        expect(info.category).toBe('normal');
+      });
+
+      it('should return normal category for another unknown command', () => {
+        const info = getRedisCommandInfo('SET');
+        expect(info.command).toBe('SET');
+        expect(info.category).toBe('normal');
+      });
+
+      // New commands added in this pass
+      it('should return slow category for ZRANGEBYLEX', () => {
+        const info = getRedisCommandInfo('ZRANGEBYLEX');
+        expect(info.command).toBe('ZRANGEBYLEX');
+        expect(info.category).toBe('slow');
+        expect(info.docs).toMatch(/zrangebylex/i);
+      });
+
+      it('should return slow category for OBJECT', () => {
+        const info = getRedisCommandInfo('OBJECT');
+        expect(info.command).toBe('OBJECT');
+        expect(info.category).toBe('slow');
+        expect(info.docs).toMatch(/object/i);
+      });
+
+      it('should return slow category for WAIT', () => {
+        const info = getRedisCommandInfo('WAIT');
+        expect(info.command).toBe('WAIT');
+        expect(info.category).toBe('slow');
+        expect(info.docs).toMatch(/wait/i);
+      });
+
+      it('should return normal category for MULTI', () => {
+        const info = getRedisCommandInfo('MULTI');
+        expect(info.command).toBe('MULTI');
+        expect(info.category).toBe('normal');
+      });
+
+      it('should return normal category for EXEC', () => {
+        const info = getRedisCommandInfo('EXEC');
+        expect(info.command).toBe('EXEC');
+        expect(info.category).toBe('normal');
+      });
+    });
+
+    describe('REDIS_COMMAND_INFO map', () => {
+      it('should contain all 32 explicitly documented commands', () => {
+        expect(Object.keys(REDIS_COMMAND_INFO)).toHaveLength(32);
+      });
+
+      it('should contain exactly 3 dangerous commands', () => {
+        const dangerous = Object.values(REDIS_COMMAND_INFO).filter(
+          (c) => c.category === 'dangerous'
+        );
+        expect(dangerous).toHaveLength(3);
+        const names = dangerous.map((c) => c.command);
+        expect(names).toContain('KEYS');
+        expect(names).toContain('FLUSHALL');
+        expect(names).toContain('FLUSHDB');
+      });
+
+      it('should contain exactly 4 blocking commands', () => {
+        const blocking = Object.values(REDIS_COMMAND_INFO).filter(
+          (c) => c.category === 'blocking'
+        );
+        expect(blocking).toHaveLength(4);
+        const names = blocking.map((c) => c.command);
+        expect(names).toContain('BLPOP');
+        expect(names).toContain('BRPOP');
+        expect(names).toContain('BRPOPLPUSH');
+        expect(names).toContain('BLMOVE');
+      });
+
+      it('should contain exactly 23 slow commands', () => {
+        const slow = Object.values(REDIS_COMMAND_INFO).filter(
+          (c) => c.category === 'slow'
+        );
+        expect(slow).toHaveLength(23);
+      });
+
+      it('should contain exactly 2 normal commands', () => {
+        const normal = Object.values(REDIS_COMMAND_INFO).filter(
+          (c) => c.category === 'normal'
+        );
+        expect(normal).toHaveLength(2);
+        const names = normal.map((c) => c.command);
+        expect(names).toContain('MULTI');
+        expect(names).toContain('EXEC');
+      });
+
+      it('should include ZRANGEBYLEX in the map', () => {
+        expect(REDIS_COMMAND_INFO['ZRANGEBYLEX']).toBeDefined();
+        expect(REDIS_COMMAND_INFO['ZRANGEBYLEX'].category).toBe('slow');
+      });
+
+      it('should include OBJECT in the map', () => {
+        expect(REDIS_COMMAND_INFO['OBJECT']).toBeDefined();
+        expect(REDIS_COMMAND_INFO['OBJECT'].category).toBe('slow');
+      });
+
+      it('should include WAIT in the map', () => {
+        expect(REDIS_COMMAND_INFO['WAIT']).toBeDefined();
+        expect(REDIS_COMMAND_INFO['WAIT'].category).toBe('slow');
+      });
+
+      it('should have docs URLs for all commands', () => {
+        for (const [, info] of Object.entries(REDIS_COMMAND_INFO)) {
+          expect(typeof info.docs).toBe('string');
+          expect((info.docs ?? '').length).toBeGreaterThan(0);
+          expect(info.docs).toMatch(/^https?:\/\//);
+        }
+      });
     });
   });
 });
