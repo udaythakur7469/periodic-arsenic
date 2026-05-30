@@ -5,7 +5,7 @@
 import { Monitor, RawQueryEvent } from '../core/types';
 import { captureCallsite } from '../core/utils';
 
-const DOCS_BASE = 'https://periodic.dev/redis';
+const DOCS_BASE = 'https://arsenicdev.online/docs/signals/redis-';
 
 /**
  * Redis command information with docs links
@@ -24,157 +24,172 @@ export const REDIS_COMMAND_INFO: Record<string, RedisCommandInfo> = {
   KEYS: {
     command: 'KEYS',
     category: 'dangerous',
-    docs: `${DOCS_BASE}/keys`,
+    docs: `${DOCS_BASE}keys`,
   },
   FLUSHALL: {
     command: 'FLUSHALL',
     category: 'dangerous',
-    docs: `${DOCS_BASE}/flushall`,
+    docs: `${DOCS_BASE}flushall`,
   },
   FLUSHDB: {
     command: 'FLUSHDB',
     category: 'dangerous',
-    docs: `${DOCS_BASE}/flushdb`,
+    docs: `${DOCS_BASE}flushdb`,
   },
 
   // Blocking commands
   BLPOP: {
     command: 'BLPOP',
     category: 'blocking',
-    docs: `${DOCS_BASE}/blpop`,
+    docs: `${DOCS_BASE}blpop`,
   },
   BRPOP: {
     command: 'BRPOP',
     category: 'blocking',
-    docs: `${DOCS_BASE}/brpop`,
+    docs: `${DOCS_BASE}brpop`,
   },
   BRPOPLPUSH: {
     command: 'BRPOPLPUSH',
     category: 'blocking',
-    docs: `${DOCS_BASE}/brpoplpush`,
+    docs: `${DOCS_BASE}brpoplpush`,
   },
   BLMOVE: {
     command: 'BLMOVE',
     category: 'blocking',
-    docs: `${DOCS_BASE}/blmove`,
+    docs: `${DOCS_BASE}blmove`,
   },
 
   // Slow commands - expensive operations
   SORT: {
     command: 'SORT',
     category: 'slow',
-    docs: `${DOCS_BASE}/sort`,
+    docs: `${DOCS_BASE}sort`,
   },
   SUNION: {
     command: 'SUNION',
     category: 'slow',
-    docs: `${DOCS_BASE}/sunion`,
+    docs: `${DOCS_BASE}sunion`,
   },
   SINTER: {
     command: 'SINTER',
     category: 'slow',
-    docs: `${DOCS_BASE}/sinter`,
+    docs: `${DOCS_BASE}sinter`,
   },
   SDIFF: {
     command: 'SDIFF',
     category: 'slow',
-    docs: `${DOCS_BASE}/sdiff`,
+    docs: `${DOCS_BASE}sdiff`,
   },
   SUNIONSTORE: {
     command: 'SUNIONSTORE',
     category: 'slow',
-    docs: `${DOCS_BASE}/sunionstore`,
+    docs: `${DOCS_BASE}sunionstore`,
   },
   SINTERSTORE: {
     command: 'SINTERSTORE',
     category: 'slow',
-    docs: `${DOCS_BASE}/sinterstore`,
+    docs: `${DOCS_BASE}sinterstore`,
   },
   SDIFFSTORE: {
     command: 'SDIFFSTORE',
     category: 'slow',
-    docs: `${DOCS_BASE}/sdiffstore`,
+    docs: `${DOCS_BASE}sdiffstore`,
   },
   ZINTERSTORE: {
     command: 'ZINTERSTORE',
     category: 'slow',
-    docs: `${DOCS_BASE}/zinterstore`,
+    docs: `${DOCS_BASE}zinterstore`,
   },
   ZUNIONSTORE: {
     command: 'ZUNIONSTORE',
     category: 'slow',
-    docs: `${DOCS_BASE}/zunionstore`,
+    docs: `${DOCS_BASE}zunionstore`,
   },
   ZRANGEBYSCORE: {
     command: 'ZRANGEBYSCORE',
     category: 'slow',
-    docs: `${DOCS_BASE}/zrangebyscore`,
+    docs: `${DOCS_BASE}zrangebyscore`,
   },
   ZREVRANGEBYSCORE: {
     command: 'ZREVRANGEBYSCORE',
     category: 'slow',
-    docs: `${DOCS_BASE}/zrevrangebyscore`,
+    docs: `${DOCS_BASE}zrevrangebyscore`,
   },
 
   // Scan operations (better than KEYS but still monitored)
   SCAN: {
     command: 'SCAN',
     category: 'slow',
-    docs: `${DOCS_BASE}/scan`,
+    docs: `${DOCS_BASE}scan`,
   },
   SSCAN: {
     command: 'SSCAN',
     category: 'slow',
-    docs: `${DOCS_BASE}/sscan`,
+    docs: `${DOCS_BASE}sscan`,
   },
   HSCAN: {
     command: 'HSCAN',
     category: 'slow',
-    docs: `${DOCS_BASE}/hscan`,
+    docs: `${DOCS_BASE}hscan`,
   },
   ZSCAN: {
     command: 'ZSCAN',
     category: 'slow',
-    docs: `${DOCS_BASE}/zscan`,
+    docs: `${DOCS_BASE}zscan`,
   },
 
   // Large data operations
   HGETALL: {
     command: 'HGETALL',
     category: 'slow',
-    docs: `${DOCS_BASE}/hgetall`,
+    docs: `${DOCS_BASE}hgetall`,
   },
   SMEMBERS: {
     command: 'SMEMBERS',
     category: 'slow',
-    docs: `${DOCS_BASE}/smembers`,
+    docs: `${DOCS_BASE}smembers`,
   },
   LRANGE: {
     command: 'LRANGE',
     category: 'slow',
-    docs: `${DOCS_BASE}/lrange`,
+    docs: `${DOCS_BASE}lrange`,
   },
   ZRANGE: {
     command: 'ZRANGE',
     category: 'slow',
-    docs: `${DOCS_BASE}/zrange`,
+    docs: `${DOCS_BASE}zrange`,
   },
   ZREVRANGE: {
     command: 'ZREVRANGE',
     category: 'slow',
-    docs: `${DOCS_BASE}/zrevrange`,
+    docs: `${DOCS_BASE}zrevrange`,
+  },
+  ZRANGEBYLEX: {
+    command: 'ZRANGEBYLEX',
+    category: 'slow',
+    docs: `${DOCS_BASE}zrangebylex`,
+  },
+  OBJECT: {
+    command: 'OBJECT',
+    category: 'slow',
+    docs: `${DOCS_BASE}object`,
+  },
+  WAIT: {
+    command: 'WAIT',
+    category: 'slow',
+    docs: `${DOCS_BASE}wait`,
   },
 
   // Multi/Exec
   MULTI: {
     command: 'MULTI',
     category: 'normal',
-    docs: `${DOCS_BASE}/multi`,
+    docs: `${DOCS_BASE}multi`,
   },
   EXEC: {
     command: 'EXEC',
     category: 'normal',
-    docs: `${DOCS_BASE}/exec`,
+    docs: `${DOCS_BASE}exec`,
   },
 };
 
@@ -187,7 +202,7 @@ export function getRedisCommandInfo(command: string): RedisCommandInfo {
     REDIS_COMMAND_INFO[upperCommand] || {
       command: upperCommand,
       category: 'normal',
-      docs: `${DOCS_BASE}/commands`,
+      docs: `${DOCS_BASE}commands`,
     }
   );
 }
