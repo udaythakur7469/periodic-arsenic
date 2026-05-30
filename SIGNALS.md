@@ -293,7 +293,7 @@ High-frequency query is fast and stable, indicating well-optimized execution.
 
 Arsenic provides special monitoring for Redis commands with automatic categorization and documentation links. Every Redis command is classified into one of four categories — `dangerous`, `blocking`, `slow`, or `normal` — so you can route alerts with precision rather than treating all Redis activity the same.
 
-29 commands are explicitly documented. Any command not in the list defaults to the `normal` category.
+32 commands are explicitly documented. Any command not in the list defaults to the `normal` category.
 
 ### Redis Command Categories
 
@@ -307,7 +307,7 @@ These commands should **never run in production**. They either block the entire 
 - **Category:** `dangerous`
 - **Issue:** Performs a full keyspace scan, blocking all other operations while it runs. On a large dataset this can stall Redis for seconds.
 - **Fix:** Use `SCAN` with a cursor for iterative, non-blocking key enumeration.
-- **Docs:** https://periodic.dev/redis/keys
+- **Docs:** https://arsenicdev.online/docs/signals/redis-keys
 
 ---
 
@@ -315,7 +315,7 @@ These commands should **never run in production**. They either block the entire 
 - **Category:** `dangerous`
 - **Issue:** Deletes every key in every database on the Redis instance. There is no confirmation prompt and no undo.
 - **Fix:** Restrict this command via Redis ACLs. Use targeted `DEL` or `UNLINK` for key removal.
-- **Docs:** https://periodic.dev/redis/flushall
+- **Docs:** https://arsenicdev.online/docs/signals/redis-flushall
 
 ---
 
@@ -323,7 +323,7 @@ These commands should **never run in production**. They either block the entire 
 - **Category:** `dangerous`
 - **Issue:** Deletes all keys in the currently selected database. Equally destructive within its scope.
 - **Fix:** Restrict via ACLs. Use selective key deletion instead.
-- **Docs:** https://periodic.dev/redis/flushdb
+- **Docs:** https://arsenicdev.online/docs/signals/redis-flushdb
 
 ---
 
@@ -338,7 +338,7 @@ These commands block the calling client until data becomes available or a timeou
 - **Issue:** Blocks the connection until an element is available in one of the specified lists.
 - **Use case:** Background job queues, event streams.
 - **Caution:** Always set a timeout. Unbounded blocking connections exhaust your connection pool.
-- **Docs:** https://periodic.dev/redis/blpop
+- **Docs:** https://arsenicdev.online/docs/signals/redis-blpop
 
 ---
 
@@ -347,7 +347,7 @@ These commands block the calling client until data becomes available or a timeou
 - **Issue:** Blocking right-side pop from a list. Same behavior as `BLPOP` from the tail.
 - **Use case:** LIFO task queues.
 - **Caution:** Use with a timeout and dedicated connection pool.
-- **Docs:** https://periodic.dev/redis/brpop
+- **Docs:** https://arsenicdev.online/docs/signals/redis-brpop
 
 ---
 
@@ -356,7 +356,7 @@ These commands block the calling client until data becomes available or a timeou
 - **Issue:** Atomically pops from one list and pushes to another — but blocks until the source list has an element.
 - **Use case:** Reliable queue patterns with a processing list.
 - **Caution:** Deprecated in Redis 6.2. Prefer `BLMOVE`.
-- **Docs:** https://periodic.dev/redis/brpoplpush
+- **Docs:** https://arsenicdev.online/docs/signals/redis-brpoplpush
 
 ---
 
@@ -365,7 +365,7 @@ These commands block the calling client until data becomes available or a timeou
 - **Issue:** Blocking atomic move between lists. Replaces `BRPOPLPUSH`.
 - **Use case:** Reliable queue with acknowledgment.
 - **Caution:** Always specify a timeout to prevent indefinite blocking.
-- **Docs:** https://periodic.dev/redis/blmove
+- **Docs:** https://arsenicdev.online/docs/signals/redis-blmove
 
 ---
 
@@ -378,77 +378,183 @@ These commands have O(N) or worse time complexity. They are safe in small datase
 **`HGETALL`**
 - **Issue:** Returns every field and value in a hash. Performance degrades linearly with hash size.
 - **Fix:** Use `HMGET` with explicit field names, or `HSCAN` to iterate large hashes.
-- **Docs:** https://periodic.dev/redis/hgetall
+- **Docs:** https://arsenicdev.online/docs/signals/redis-hgetall
 
 ---
 
 **`SMEMBERS`**
 - **Issue:** Returns all members of a set — unbounded on large sets.
 - **Fix:** Use `SSCAN` to iterate, or `SRANDMEMBER` for sampling.
-- **Docs:** https://periodic.dev/redis/smembers
+- **Docs:** https://arsenicdev.online/docs/signals/redis-smembers
 
 ---
 
 **`LRANGE`**
 - **Issue:** Scans a range of list elements. Wide ranges on large lists are expensive.
 - **Fix:** Use narrow ranges or cursor-based pagination.
-- **Docs:** https://periodic.dev/redis/lrange
+- **Docs:** https://arsenicdev.online/docs/signals/redis-lrange
 
 ---
 
 **`SORT`**
 - **Issue:** Sorts list, set, or sorted set elements. Can be memory- and CPU-intensive on large collections, especially with `BY` and `GET` patterns.
 - **Fix:** Pre-sort data at write time using a sorted set. Avoid `SORT` in hot paths.
-- **Docs:** https://periodic.dev/redis/sort
+- **Docs:** https://arsenicdev.online/docs/signals/redis-sort
 
 ---
 
-**`SCAN` / `SSCAN` / `HSCAN` / `ZSCAN`**
-- **Issue:** Iterative cursor-based scanning. Much better than `KEYS`, but still O(N) across the full dataset when iterated to completion.
-- **Fix:** Use with count hints and avoid completing full scans in request handlers. Move to background jobs where possible.
-- **Docs:** https://periodic.dev/redis/scan | https://periodic.dev/redis/sscan | https://periodic.dev/redis/hscan | https://periodic.dev/redis/zscan
+**`SCAN`**
+- **Issue:** Iterative cursor-based keyspace scan. Non-blocking per call, but still O(N) total work when iterated to completion.
+- **Fix:** Use with `COUNT` hints. Move full scans to background jobs; never iterate to completion on a hot request path.
+- **Docs:** https://arsenicdev.online/docs/signals/redis-scan
 
 ---
 
-**`SUNION` / `SINTER` / `SDIFF`**
-- **Issue:** Set operations across multiple sets. Complexity grows with the total size of all input sets.
-- **Fix:** Cache results for stable inputs. Avoid in hot paths with large sets.
-- **Docs:** https://periodic.dev/redis/sunion | https://periodic.dev/redis/sinter | https://periodic.dev/redis/sdiff
+**`SSCAN`**
+- **Issue:** Cursor-based iteration over a set. O(N) across all set members when iterated to completion.
+- **Fix:** Use `COUNT` hints. Prefer `SISMEMBER` or `SMEMBERS` on small sets; move full iterations to background jobs.
+- **Docs:** https://arsenicdev.online/docs/signals/redis-sscan
 
 ---
 
-**`SUNIONSTORE` / `SINTERSTORE` / `SDIFFSTORE`**
-- **Issue:** Same as above but also writes the result to a destination key. Adds a write operation on top of the set computation.
-- **Fix:** Run as a background job. Cache the stored result with a TTL.
-- **Docs:** https://periodic.dev/redis/sunionstore | https://periodic.dev/redis/sinterstore | https://periodic.dev/redis/sdiffstore
+**`HSCAN`**
+- **Issue:** Cursor-based iteration over a hash. O(N) across all hash fields when iterated to completion.
+- **Fix:** Use `COUNT` hints. For targeted access use `HGET`/`HMGET` instead of scanning the full hash.
+- **Docs:** https://arsenicdev.online/docs/signals/redis-hscan
 
 ---
 
-**`ZRANGE` / `ZRANGEBYSCORE` / `ZRANGEBYLEX` / `ZREVRANGE` / `ZREVRANGEBYSCORE`**
-- **Issue:** Range queries on sorted sets. Linear in the number of elements returned.
-- **Fix:** Paginate with `LIMIT offset count`. Avoid returning the entire sorted set.
-- **Docs:** https://periodic.dev/redis/zrange | https://periodic.dev/redis/zrangebyscore | https://periodic.dev/redis/zrangebylex | https://periodic.dev/redis/zrevrange | https://periodic.dev/redis/zrevrangebyscore
+**`ZSCAN`**
+- **Issue:** Cursor-based iteration over a sorted set. O(N) across all members when iterated to completion.
+- **Fix:** Use `COUNT` hints. For range access prefer `ZRANGE` with bounds or `ZSCORE`/`ZRANK` for point lookups.
+- **Docs:** https://arsenicdev.online/docs/signals/redis-zscan
 
 ---
 
-**`ZINTERSTORE` / `ZUNIONSTORE`**
-- **Issue:** Computes intersection or union of multiple sorted sets and stores the result. Expensive with large input sets.
-- **Fix:** Cache results. Run in background workers rather than on the request path.
-- **Docs:** https://periodic.dev/redis/zinterstore | https://periodic.dev/redis/zunionstore
+**`SUNION`**
+- **Issue:** Computes the union of multiple sets, returning all unique members. O(N) where N is the total number of members across all input sets.
+- **Fix:** Cache results with `SUNIONSTORE` + `EXPIRE`. Move to background workers for large or frequently-combined sets.
+- **Docs:** https://arsenicdev.online/docs/signals/redis-sunion
+
+---
+
+**`SINTER`**
+- **Issue:** Computes the intersection of multiple sets. O(N × M) where N is the smallest set size and M is the number of sets.
+- **Fix:** Cache results with `SINTERSTORE`. Place the smallest set first — Redis short-circuits on the smallest input.
+- **Docs:** https://arsenicdev.online/docs/signals/redis-sinter
+
+---
+
+**`SDIFF`**
+- **Issue:** Computes the difference between sets. O(N) where N is the total number of members in all sets combined.
+- **Fix:** Cache results with `SDIFFSTORE`. Denormalise at write time if the diff is queried frequently.
+- **Docs:** https://arsenicdev.online/docs/signals/redis-sdiff
+
+---
+
+**`SUNIONSTORE`**
+- **Issue:** Computes the union of multiple sets and writes the result to a destination key. Adds a write operation on top of the O(N) union computation.
+- **Fix:** Run as a background job with a TTL on the destination key. Reads on the hot path then hit the pre-computed key.
+- **Docs:** https://arsenicdev.online/docs/signals/redis-sunionstore
+
+---
+
+**`SINTERSTORE`**
+- **Issue:** Computes the intersection of multiple sets and stores it. Same complexity as `SINTER` with an added write.
+- **Fix:** Schedule refreshes as a background job. TTL the result key to avoid stale data.
+- **Docs:** https://arsenicdev.online/docs/signals/redis-sinterstore
+
+---
+
+**`SDIFFSTORE`**
+- **Issue:** Computes the set difference and stores it. O(N) computation plus a write; avoid on the hot request path.
+- **Fix:** Run in background workers. Cache the result with an appropriate TTL.
+- **Docs:** https://arsenicdev.online/docs/signals/redis-sdiffstore
+
+---
+
+**`ZRANGE`**
+- **Issue:** Returns elements from a sorted set between two rank positions. O(log N + M) where M is the number of elements returned. `ZRANGE 0 -1` returns the entire set.
+- **Fix:** Always pass explicit rank or score bounds. Paginate with `LIMIT offset count`. Never return the full sorted set unless necessary.
+- **Docs:** https://arsenicdev.online/docs/signals/redis-zrange
+
+---
+
+**`ZRANGEBYSCORE`**
+- **Issue:** Returns elements within a score range. Linear in the number of elements returned. An open-ended range returns the entire set.
+- **Fix:** Narrow the score range. Use `LIMIT offset count` to paginate. Prefer `ZSCORE` for point lookups.
+- **Docs:** https://arsenicdev.online/docs/signals/redis-zrangebyscore
+
+---
+
+**`ZRANGEBYLEX`**
+- **Issue:** Returns elements within a lexicographic range on a sorted set where all scores are equal. O(log N + M) where M is the number of matched elements.
+- **Fix:** Use tight lex bounds. Avoid open-ended `[- [+` ranges on large sets. Paginate with `LIMIT`.
+- **Docs:** https://arsenicdev.online/docs/signals/redis-zrangebylex
+
+---
+
+**`ZREVRANGE`**
+- **Issue:** Returns elements from a sorted set in reverse rank order. Same complexity as `ZRANGE`; `ZREVRANGE 0 -1` returns the entire set reversed.
+- **Fix:** Specify tight rank bounds. Paginate. In Redis 6.2+ prefer `ZRANGE ... REV` with `LIMIT`.
+- **Docs:** https://arsenicdev.online/docs/signals/redis-zrevrange
+
+---
+
+**`ZREVRANGEBYSCORE`**
+- **Issue:** Returns elements within a score range in descending order. Linear in elements returned; open score ranges are unbounded.
+- **Fix:** Always bound the score range. Paginate with `LIMIT offset count`. In Redis 6.2+ migrate to `ZRANGE ... BYSCORE REV LIMIT`.
+- **Docs:** https://arsenicdev.online/docs/signals/redis-zrevrangebyscore
+
+---
+
+**`ZINTERSTORE`**
+- **Issue:** Computes the intersection of multiple sorted sets and stores the result. O(N × K log K) where N is the smallest set and K is the number of input sets. Expensive with large inputs.
+- **Fix:** Cache results. Run in background workers rather than on the request path. TTL the destination key.
+- **Docs:** https://arsenicdev.online/docs/signals/redis-zinterstore
+
+---
+
+**`ZUNIONSTORE`**
+- **Issue:** Computes the union of multiple sorted sets and stores the result. O(N) + O(M log M) where N is total member count and M is the result set size.
+- **Fix:** Cache results with a TTL. Run as a scheduled background job. For small stable inputs, consider application-side aggregation.
+- **Docs:** https://arsenicdev.online/docs/signals/redis-zunionstore
 
 ---
 
 **`OBJECT`**
 - **Issue:** Inspects internal Redis object metadata (encoding, idle time, frequency). Rarely expensive but adds overhead in tight loops.
 - **Fix:** Use only for diagnostics, not in hot paths.
-- **Docs:** https://periodic.dev/redis/object
+- **Docs:** https://arsenicdev.online/docs/signals/redis-object
 
 ---
 
 **`WAIT`**
 - **Issue:** Blocks the client until a specified number of replicas acknowledge the write, or until the timeout expires. Adds latency proportional to replication lag.
 - **Fix:** Use only when strong consistency is required. Set a reasonable timeout.
-- **Docs:** https://periodic.dev/redis/wait
+- **Docs:** https://arsenicdev.online/docs/signals/redis-wait
+
+---
+
+#### Normal Commands 🟢
+
+These commands are tracked by the adapter but emit no warning or critical signals under normal usage. They are included so you can observe them in event output and build custom alerting if needed.
+
+---
+
+**`MULTI`**
+- **Category:** `normal`
+- **Issue:** Opens a Redis transaction block. On its own it is O(1) and has negligible overhead. However, a `MULTI` block that queues a large number of commands or wraps slow commands inherits the cost of everything it contains.
+- **Caution:** Transactions do not provide rollback — if a queued command errors, the rest of the pipeline still executes. Monitor the duration of the full `MULTI`/`EXEC` block, not individual commands.
+- **Docs:** https://arsenicdev.online/docs/signals/redis-multi
+
+---
+
+**`EXEC`**
+- **Category:** `normal`
+- **Issue:** Executes all commands queued since the preceding `MULTI`. Duration reflects the cumulative cost of every queued command. An `EXEC` that is consistently slow means the transaction contains expensive operations.
+- **Caution:** `EXEC` returns `null` if a `WATCH`-ed key was modified — always handle the `null` case to avoid silent data loss.
+- **Docs:** https://arsenicdev.online/docs/signals/redis-exec
 
 ---
 
@@ -459,11 +565,12 @@ import { getRedisCommandInfo } from '@periodic/arsenic';
 
 const info = getRedisCommandInfo('KEYS');
 console.log(info);
-// Output: { command: 'KEYS', category: 'dangerous', docs: 'https://periodic.dev/redis/keys' }
+// Output: { command: 'KEYS', category: 'dangerous', docs: 'https://arsenicdev.online/docs/signals/redis-keys' }
 
+// Commands not in the explicit list default to 'normal' — no signal page, fallback URL
 const info2 = getRedisCommandInfo('GET');
-console.log(info2);
-// Output: { command: 'GET', category: 'normal', docs: 'https://periodic.dev/redis/get' }
+// { command: 'GET', category: 'normal', docs: 'https://arsenicdev.online/docs/adapters/redis' }
+// 'normal' category commands emit no warning/critical signals under standard usage
 ```
 
 ---
@@ -485,7 +592,7 @@ Redis events include `commandCategory` and `commandDocs` in the `metadata` field
   "metadata": {
     "command": "HGETALL",
     "commandCategory": "slow",
-    "commandDocs": "https://periodic.dev/redis/hgetall",
+    "commandDocs": "https://arsenicdev.online/docs/signals/redis-hgetall",
     "args": ["user:123"]
   },
   "request": {
@@ -647,13 +754,13 @@ Every signal includes detailed explanations:
       "summary": "This query is both slow and frequently executed.",
       "detail": "It appears on a hot execution path...",
       "severity": "critical",
-      "docs": "https://periodic.dev/signals/hot-path"
+      "docs": "https://arsenicdev.online/docs/signals/hot-path"
     },
     "unbounded_query": {
       "summary": "Query missing limit, potential unbounded data fetch.",
       "detail": "This query does not include a LIMIT clause...",
       "severity": "critical",
-      "docs": "https://periodic.dev/signals/unbounded-query"
+      "docs": "https://arsenicdev.online/docs/signals/unbounded-query"
     }
   }
 }
