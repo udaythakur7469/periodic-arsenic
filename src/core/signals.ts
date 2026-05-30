@@ -4,7 +4,7 @@
 
 import { ForgeSignal, SignalSeverity } from './types';
 
-const DOCS_BASE = 'https://periodic.dev/signals';
+const DOCS_BASE = 'https://arsenicdev.online/docs/signals';
 
 /**
  * Bad signals (problems/warnings) - CRITICAL & WARNING
